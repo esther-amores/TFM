@@ -1,5 +1,5 @@
 
-# 📕️ Project Title
+# 📕️ Development of automatic bird acoustic analysis systems
 
 A brief description of what this project does and who it's for
 
