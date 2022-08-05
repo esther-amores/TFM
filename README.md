@@ -11,7 +11,7 @@ This project has been developed by [@esther-amores](https://www.github.com/esthe
 
 ## 🛠️ Setup
 
-This project has been developed to execute in Ubuntu 20.04. (copiar el que ja tinc al word)
+This project has been developed to execute in Ubuntu 20.04. 
 Follow these steps in order to prepare your environment.
 
 ### 📊️ Install R and RStudio
@@ -49,23 +49,8 @@ pip install -r requirements.txt
 sudo pip3 install librosa
 ```
 
-### 🐍️ Install tensorflow 
-
-```bash
-sudo apt-get install build-essential cmake git unzip \pkg-config libopenblas-dev liblapack-dev
-```
-
 ### 📼️ Install extras to reproduce .mp4 files
 
 ```bash
 sudo apt install ubuntu-restricted-extras
-```
-
-### Clone the repository 
-Run first line just if you don't have Git installed.
-
-```bash
-sudo apt install git
-git clone (name)
-cd (name)
 ```
