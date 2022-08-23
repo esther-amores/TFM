@@ -23,7 +23,8 @@
 
 source("settings.R")
 source("signal_param_func.R")
-load(here(models_dir, ""))
+load(here(models_dir, "glm_binary_NOpca.RData"))
+load(here(models_dir, "svm_multiclass_pca_radialkernel.RData"))
 
 ## ---------------------------
 
@@ -45,8 +46,8 @@ mcng <- list.files(
 ) %>%
   data.frame(path_wav = .) %>%
   mutate(
-    path_wav = paste0("/media/", path_wav),
-    filename_wav = str_extract(path_wav, pattern = "([^/]+$)")
+    path_wav = paste0("/media/esther/TFM_Esther/", path_wav),
+    str_extract(path_wav, pattern = "([^/]+$)")
   )
 
 # Save the mcng object into an .RData file 
@@ -60,7 +61,7 @@ dim(mcng)
 ##
 ###############
 
-# Select those wavs paths which are not null
+# Select those wavs paths which are desired
 files_wav_mcng <- mcng %>%
   filter(str_detect(path_wav, pattern = "Xevi"))
 
@@ -72,7 +73,7 @@ for (f in files_wav_mcng$path_wav) {
   }
   wav <- readWave(f)
   mem <- append(x = mem, values = memuse(wav, prefix = "SI")@size)
-  stop <- length(mem)
+  STOP <- length(mem)
 }
 
 # Set the parameters to pass to signal_parametrization function
@@ -81,7 +82,7 @@ params_mcng <- data.frame(
   top_bp = 15,
   threshold = NA,
   mindur = 0.01,
-  maxdur = 3,
+  maxdur = 5,
   thinning = 0.5,
   ssmooth = 700,
   wl = NA,
@@ -93,7 +94,7 @@ params_mcng <- data.frame(
 )
 
 # Execute signal_parametrization function
-features_mcng <- signal_parametrization(files_list = files_wav_mcng$filename_wav[1:stop],
+features_mcng <- signal_parametrization(files_list = files_wav_mcng$filename_wav[1:STOP],
                                         files_path = "/media/esther/TFM_Esther/Xevi/", 
                                         params = params_mcng)
 
@@ -132,11 +133,35 @@ final <- features_mcng %>%
   )
 
 
-
 ###############
 ##
 ## Multiclass classification
 ##
 ###############
 
-final 
+mod_svm <- mod_svm_cv$best.model
+
+# We identify the zero-variance columns' names
+which(apply(new_data, 2, var) == 0)
+
+# We remove zero variance columns from the dataset
+new_data <- new_data[, which(apply(new_data, 2, var) != 0)]
+
+# Perform a Principal Component Analysis 
+pca <- prcomp(new_data, center = TRUE, scale = TRUE)
+
+# Make predictions with new_data dataset
+new_data_pca <- predict(pca, newdata = new_data) %>% 
+  as.data.frame() %>% 
+  select(1:15)
+
+# Predict the fitted model with the new_data_pca dataset
+test_pred_svm <- predict(mod_svm, newdata = new_data_pca, type = "response")
+test_pred_svm_probs <- predict(mod_svm, newdata = new_data_pca, type = "response", probability = TRUE)
+
+final <- features_mcng %>% 
+  select(sound.files, duration, selec, start, end) %>% 
+  mutate(
+    Specie = test_pred_svm,
+    prob_hasbird = round(test_pred_svm_probs, 4)
+  ) 

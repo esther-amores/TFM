@@ -30,15 +30,6 @@ load(here(rdata_dir, "features_test_pca.RData"))
 
 ## ---------------------------
 
-# # Input by variable mean in NA values
-# for(i in 1:ncol(features_train_pca)) {
-#   features_train_pca[is.na(features_train_pca[, i]), i] <- mean(features_train_pca[, i], na.rm = TRUE)
-# }
-# # Input by variable mean in NA values
-# for(i in 1:ncol(features_test_pca)) {
-#   features_test_pca[is.na(features_test_pca[, i]), i] <- mean(features_test_pca[, i], na.rm = TRUE)
-# }
-
 # Input by variable mean in NA values according the hasbird group in features_train dataset
 rownames_features_train <- rownames(features_train)
 features_train <- features_train %>%
@@ -67,6 +58,8 @@ time_mod_glm <- system.time({
   mod_glm <- glm(hasbird ~ ., data = features_train %>% select(-Specie), family = "binomial")
 })
 
+save(mod_glm, file = here(models_dir, "glm_binary_NOpca.RData"))
+
 # Summarize the logistic regression model
 smod_glm <- summary(mod_glm)
 smod_glm
@@ -91,14 +84,42 @@ test_pred_glm <- predict(mod_glm, newdata = features_test %>% select(-Specie), t
 # Accuracy on features_test dataset
 mean(test_pred_glm == features_test$hasbird)
 
-# # Predict the fitted model with the test dataset
-# test_pred_glm <- predict(mod_glm, newdata = test, type = "response") %>%
-#   sapply(function(x) { ifelse(x >= 0.5, 1, 0) })
-# 
-# table(test_pred_glm)
-
 # Compute all classification metrics on test predictions
 metrics(predicted = test_pred_glm, actual = features_test$hasbird)
+
+# Confusion matrix
+ggsave(
+  filename = here(plots_dir, "glm_binary_NOpca.png"),
+  dpi = 1000,
+  width = 20,
+  height = 15,
+  units = "cm"
+)
+
+# Model 
+smod_glm %>%
+  xtable(sanitize.colnames.function = bold,
+         booktabs = TRUE,
+         floating = TRUE,
+         label = "tab:glm_binary_NOpca") %>%
+  print(file = here(tables_dir, "glm_binary_NOpca.tex"))
+
+# AUC-ROC
+autoplot(evalmod(scores = test_pred_glm, labels = features_test$hasbird), curvetype = "ROC")
+
+ggsave(
+  filename = here(plots_dir, "glm_binary_NOpca_roc.png"),
+  dpi = 1000,
+  width = 20,
+  height = 15,
+  units = "cm"
+)
+# test_pred_glm <- predict(mod_glm, newdata = features_test %>% select(-Specie), type = "response")
+# ROC <- roc(response = features_test$hasbird, predictor = test_pred_glm)
+# ROC_rounded <- roc(response = features_test$hasbird, predictor = round(test_pred_glm, 1))
+# plot(ROC, print.auc = TRUE)
+# lines(ROC_rounded, col = "red", type = "b")
+# text(0.4, 0.35, labels = sprintf("AUC: %0.3f", auc(ROC_rounded)), col = "red")
 
 
 ###############
@@ -187,15 +208,6 @@ test_pred_lasso <- predict(mod_lasso,
 
 # Accuracy on features_test_pca dataset
 mean(test_pred_lasso == features_test_pca$hasbird)
-
-# # Predict the fitted model with the test dataset
-# test_pred_lasso <- predict(mod_lasso, 
-#                            s = lambda_lasso, 
-#                            newx = test %>% as.matrix(), 
-#                            type = "response") %>% 
-#   sapply(function(x) { ifelse(x >= 0.5, 1, 0) })
-# 
-# table(test_pred_lasso)
 
 # Compute all classification metrics on test predictions
 metrics(predicted = test_pred_lasso, actual = features_test_pca$hasbird)
@@ -324,7 +336,6 @@ time_mod_svm2 <- system.time({
 
 save(mod_svm2, file = here(models_dir, "svm_binary_pca_radialkernel.RData"))
 
-
 # Predict the fitted model with the features_train_pca_pca dataset
 train_pred_svm2 <- predict(mod_svm2, features_train_pca %>% select(-Specie), type = "class") 
 
@@ -339,7 +350,6 @@ mean(test_pred_svm2 == features_test_pca$hasbird)
 
 # Compute all classification metrics on test predictions
 metrics(predicted = ifelse(test_pred_svm2 == 1, 1, 0), actual = features_test_pca$hasbird)
-
 
 
 ###############
@@ -372,7 +382,7 @@ metrics(predicted = ifelse(test_pred_mlp == 1, 1, 0), actual = features_test_pca
 
 ###############
 ##
-## MLP (cross-testation)
+## MLP (cross-validation)
 ##
 ###############
 
@@ -396,161 +406,3 @@ mean(test_pred_mlp == features_test_pca$hasbird)
 
 # Compute all classification metrics on test predictions
 metrics(predicted = ifelse(test_pred_mlp == 1, 1, 0), actual = features_test_pca$hasbird)
-
-
-
-
-# # AUC-ROC
-# test_pred_glm <- predict(mod_glm, newdata = features_test_pca %>% select(-Specie), type = "response")
-# ROC <- roc(response = features_test_pca$hasbird, predictor = test_pred_glm)
-# ROC_rounded <- roc(response = features_test_pca$hasbird, predictor = round(test_pred_glm, 1))
-# plot(ROC, print.auc = TRUE)
-# lines(ROC_rounded, col = "red", type = "b")
-# text(0.4, 0.43, labels = sprintf("AUC: %0.3f", auc(ROC_rounded)), col = "red")
-
-
-# # Obtain those explanatory variables whose confidence level is 95%
-# sel_vars <- rownames(smod_glm$coefficients[smod_glm$coefficients[, 4] <= 0.05, ])
-# fml <- as.formula(sprintf("features_train_pca$hasbird ~ %s", paste(sprintf("features_train_pca$%s", sel_vars), collapse = "+")))
-
-# # Plot a 3D point cloud with the statistically significant variables
-# colors <- c("#E69F00", "#56B4E9")
-# colors <- colors[features_train_pca$hasbird]
-# 
-# par(mfrow = c(2, 2))
-# 
-# library(scatterplot3d)
-# scatterplot3d(
-#   fml,
-#   cex.main = 0.7,
-#   cex.axis = 0.5,
-#   cex.lab = 0.7,
-#   angle = 20,
-#   pch = 16,
-#   type = "p",
-#   highlight.3d = TRUE,
-#   color = colors
-#   # col.grid = "palegreen",
-#   # col.axis = "blue"
-# )
-# 
-# scatterplot3d(
-#   fml,
-#   cex.main = 0.7,
-#   cex.axis = 0.5,
-#   cex.lab = 0.7,
-#   angle = -40,
-#   pch = 16,
-#   type = "p",
-#   highlight.3d = TRUE,
-#   color = colors
-#   # col.grid = "palegreen",
-#   # col.axis = "blue"
-# )
-# 
-# scatterplot3d(
-#   fml,
-#   cex.main = 0.7,
-#   cex.axis = 0.5,
-#   cex.lab = 0.7,
-#   angle = -120,
-#   pch = 16,
-#   type = "p",
-#   highlight.3d = TRUE,
-#   color = colors
-#   # col.grid = "palegreen",
-#   # col.axis = "blue"
-# )
-# 
-# scatterplot3d(
-#   fml,
-#   cex.main = 0.7,
-#   cex.axis = 0.5,
-#   cex.lab = 0.7,
-#   angle = 120,
-#   pch = 16,
-#   type = "p",
-#   highlight.3d = TRUE,
-#   color = colors
-#   # col.grid = "palegreen",
-#   # col.axis = "blue"
-# )
-# 
-# legend(
-#   "bottom",
-#   legend = levels(features_train_pca$hasbird),
-#   col = c("#E69F00", "#56B4E9"),
-#   inset = -0.25,
-#   xpd = TRUE,
-#   horiz = TRUE
-# )
-# 
-# # Fit a logistic regression model with the statistically significant variables
-# time_mod_glm2 <- system.time({
-#   mod_glm2 <- glm(as.formula(sprintf("hasbird ~ %s-1", paste(sel_vars, collapse = "+"))), 
-#                   data = features_train_pca, 
-#                   family = binomial)
-# })
-# 
-# # Summarize the logistic regression model
-# summary(mod_glm2)
-# 
-# # Predict the fitted model
-# pred_glm <- predict(mod_glm2, newdata = features_test_pca, type = "response") %>% 
-#   sapply(function(x) { ifelse(x >= 0.5, 1, 0) })
-# 
-# # Confusion matrix
-# conf_mat <- table(features_test_pca$hasbird, pred_glm, dnn = c("Real class", "Predicted class"))
-# conf_mat 
-# 
-# # Plot confusion matrix
-# library(cvms)
-# 
-# conf_mat_df <- as_tibble(conf_mat)
-# plot_confusion_matrix(conf_mat_df,
-#                       target_col = "Real class",
-#                       prediction_col = "Predicted class",
-#                       counts_col = "n") 
-
-
-
-
-
-time_mod_glm <- system.time({
-  
-  set.seed(999)
-  cv_error <- c()
-  k <- 5
-  
-  for (i in 1:k) {
-    mod_glm <- glm(hasbird ~ .-1, data = features_train_pca, family = binomial)
-    cv_error[i] <- cv.glm(data = features_train_pca, glmfit = mod_glm, K = k)$delta[1]
-    
-    # mod_glm_df <- augment(mod_glm, data = features_train_pca)
-    # 
-    # p1 <- ggplot(mod_glm_df, aes(x = .fitted, y = .resid)) +
-    #   geom_point(size = 1, alpha = 0.4) +
-    #   labs(title = sprintf("%d-fold Cross-testation", i),
-    #        subtitle = "Constant variance among residuals", 
-    #        x = "Predicted values",
-    #        y = "Residuals")
-    # 
-    # p2 <- ggplot(mod_glm_df, aes(x = 1:nrow(mod_glm_df), y = .resid)) +
-    #   geom_point(size = 1, alpha = 0.4) +
-    #   labs(title = sprintf("%d-fold Cross-testation", i),
-    #        subtitle = "Uncorrelated residuals",
-    #        x = "Row ID",
-    #        y = "Residuals")
-    # 
-    # ggarrange(p1, p2, ncol = 2) %>% 
-    #   annotate_figure(top = text_grob(mod_glm$call$formula, size = 14))
-  }
-})
-
-# Plot the cross-testation features_train_pca error 
-ggplot(data = data.frame(fold = 1:k, train_error = cv_error), 
-       aes(x = fold, y = train_error)) +
-  geom_line() +
-  theme_pubclean()
-
-

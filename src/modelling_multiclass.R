@@ -212,8 +212,7 @@ time_mod_svm_cv <- system.time({
 })
 
 # Save the mod_svm_cv object into an .RData file
-save(mod_svm_cv, file = here(rdata_dir, "svm_multiclass_pca_cv_radialkernel.RData"))
-dim(mod_svm_cv)
+save(mod_svm_cv, file = here(models_dir, "svm_multiclass_pca_cv_radialkernel.RData"))
 
 # mod_svm_cv summary
 summary(mod_svm_cv)
@@ -231,19 +230,23 @@ ggplot(data = mod_svm_cv$performances, aes(x = cost, y = error)) +
 mod_svm3 <- mod_svm_cv$best.model
 
 # Predict the fitted model with the features_train_pca dataset
-train_pred_svm3 <- predict(mod_svm2, newdata = features_train_pca %>% select(-hasbird), type = "response")
+train_pred_svm3 <- predict(mod_svm3, newdata = features_train_pca %>% select(-hasbird), type = "response")
 
 # Accuracy on features_train_pca dataset
 mean(train_pred_svm3 == features_train_pca$Specie)
 
 # Predict the fitted model with the features_test_pca dataset
-test_pred_svm3 <- predict(mod_svm2, newdata = features_test_pca %>% select(-hasbird), type = "response")
+test_pred_svm3 <- predict(mod_svm3, newdata = features_test_pca %>% select(-hasbird), type = "response")
 
 # Accuracy on features_test_pca dataset
 mean(test_pred_svm3 == features_test_pca$Specie)
 
 # Compute all classification metrics on test predictions
 metrics(predicted = test_pred_svm3, actual = features_test_pca$Specie, multiclass = TRUE)
+
+# AUC
+multiclass.roc(response = features_test_pca$Specie, 
+               predictor = as.numeric(test_pred_svm3))$auc[1]
 
 
 ###############
@@ -318,6 +321,10 @@ mean(test_pred_rpart2 == features_test$Specie)
 # Compute all classification metrics on test predictions
 metrics(predicted = test_pred_rpart2, actual = features_test$Specie, multiclass = TRUE)
 
+# AUC
+multiclass.roc(response = features_test_pca$Specie, 
+               predictor = as.numeric(test_pred_rpart2))$auc[1]
+
 
 ###############
 ##
@@ -325,19 +332,74 @@ metrics(predicted = test_pred_rpart2, actual = features_test$Specie, multiclass 
 ##
 ###############
 
+time_mod_rf <- system.time({
+  mod_rf <- randomForest(Specie ~ .,
+                         data = features_train %>% select(-hasbird),
+                         importance = TRUE)
+})
+
+# Save the mod_rf object into an .RData file
+save(mod_rf, file = here(models_dir, "rf_multiclass_pca.RData"))
+dim(mod_rf)
+
+# Predict the fitted model with the features_train dataset
+train_pred_rf <- predict(mod_rf, newdata = features_train %>% select(-hasbird))
+
+# Accuracy on features_train dataset
+mean(train_pred_rf == features_train$Specie)
+
+# Predict the fitted model with the features_test dataset
+test_pred_rf <- predict(mod_rf, newdata = features_test %>% select(-hasbird))
+
+# Accuracy on features_test dataset
+mean(test_pred_rf == features_test$Specie)
+
+# Compute all classification metrics on test predictions
+metrics(predicted = test_pred_rf, actual = features_test$Specie, multiclass = TRUE)
+
+# AUC
+multiclass.roc(response = features_test_pca$Specie, 
+               predictor = as.numeric(test_pred_rf))$auc[1]
+
+
+###############
+##
+## Random forest (cross-validation)
+##
+###############
+
 time_mod_rf_cv <- system.time({
-  mod_rf_cv <- tune("randomForest", 
-                    Specie ~ ., 
+  mod_rf_cv <- tune("randomForest",
+                    Specie ~ .,
                     data = features_train %>% select(-hasbird),
                     kernel = "radial",
                     type = "C-classification",
                     ranges = list(
-                      ntree = c(500, 1000, 1500, 2000),
-                      mtry = 10:30),
-                    tunecontrol = tune.control(cross = 5))
+                      mtry = 10:50
+                    ),
+                    tunecontrol = tune.control(cross = 3))
 })
 
 # Save the mod_rf_cv object into an .RData file
-save(mod_rf_cv, file = here(rdata_dir, "svm_multiclass_rf_cv_radialkernel.RData"))
+save(mod_rf_cv, file = here(models_dir, "rf_multiclass_pca_cv.RData"))
 dim(mod_rf_cv)
+
+# Predict the fitted model with the features_train dataset
+train_pred_rf <- predict(mod_rf_cv, newdata = features_train %>% select(-hasbird))
+
+# Accuracy on features_train dataset
+mean(train_pred_rf == features_train$Specie)
+
+# Predict the fitted model with the features_test dataset
+test_pred_rf <- predict(mod_rf_cv, newdata = features_test %>% select(-hasbird))
+
+# Accuracy on features_test dataset
+mean(test_pred_rf == features_test$Specie)
+
+# Compute all classification metrics on test predictions
+metrics(predicted = test_pred_rf, actual = features_test$Specie, multiclass = TRUE)
+
+# AUC
+multiclass.roc(response = features_test_pca$Specie, 
+               predictor = as.numeric(test_pred_rf))$auc[1]
 

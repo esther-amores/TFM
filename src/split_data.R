@@ -54,3 +54,26 @@ file.copy(from = train$path_wav,
 # Copy test wavs to test_dir
 file.copy(from = test$path_wav,
           to = test_dir)
+
+# See the train files total duration (in hours)
+sound_lengths <- c()
+
+for (f in train$path_wav) {
+  wav <- readWave(f)
+  sound_length <- length(wav@left) / wav@samp.rate
+  sound_lengths <- append(x = sound_lengths, values = sound_length)
+}
+
+sum(sound_lengths) / 3600
+
+# See the test files total duration (in hours)
+sound_lengths <- c()
+
+for (f in test$path_wav) {
+  wav <- readWave(f)
+  sound_length <- length(wav@left) / wav@samp.rate
+  sound_lengths <- append(x = sound_lengths, values = sound_length)
+}
+
+sum(sound_lengths) / 3600
+

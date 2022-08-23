@@ -50,7 +50,9 @@ packages <- c(
   "glmnet",
   "cvms",
   "pROC",
+  "precrec",
   "nnet",
+  "randomForest",
   "e1071",
   "boot",
   "knitr",
@@ -108,6 +110,8 @@ plots_dir <- here("..", "reports", "figures", "plots")
 tables_dir <- here("..", "reports", "tables")
 
 src_dir <- here("..", "src")
+
+media_dir <- here("..", "..", "..", "..", "..", "media", "esther", "TFM_Esther")
 
 
 ## Create new folders if don't exist

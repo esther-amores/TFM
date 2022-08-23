@@ -74,6 +74,30 @@ ggsave(
   units = "cm"
 )
 
+# Logistic regression example plot
+set.seed(666)
+x1 = rnorm(1000)           
+x2 = rnorm(1000)
+z = 1 + 2*x1 + 3*x2        
+pr = 1 / (1+exp(-z))       
+y = rbinom(1000, 1, pr)     
+
+df = data.frame(y = y, x1 = x1, x2 = x2)
+mod = glm(y ~ x1 + x2, data = df, family = "binomial")
+
+ggplot(df, aes(x = x1 + x2, y = y)) +
+  geom_smooth(method = "glm", se = FALSE, method.args = list(family = binomial)) +
+  labs(x = "x") +
+  theme_classic()
+
+ggsave(
+  filename = here(plots_dir, "logistic_regression.png"),
+  dpi = 1000,
+  width = 20,
+  height = 15,
+  units = "cm"
+)
+
 # Distribution of the labels in Vocalization_type variable from xenocanto dataset
 vocal <- xenocanto %>% 
   mutate_at(.vars = vars(Vocalization_type), .funs = str_to_lower) %>% 
