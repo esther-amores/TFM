@@ -96,14 +96,6 @@ ggsave(
   units = "cm"
 )
 
-# Model 
-smod_glm %>%
-  xtable(sanitize.colnames.function = bold,
-         booktabs = TRUE,
-         floating = TRUE,
-         label = "tab:glm_binary_NOpca") %>%
-  print(file = here(tables_dir, "glm_binary_NOpca.tex"))
-
 # AUC-ROC
 autoplot(evalmod(scores = test_pred_glm, labels = features_test$hasbird), curvetype = "ROC")
 
@@ -114,12 +106,6 @@ ggsave(
   height = 15,
   units = "cm"
 )
-# test_pred_glm <- predict(mod_glm, newdata = features_test %>% select(-Specie), type = "response")
-# ROC <- roc(response = features_test$hasbird, predictor = test_pred_glm)
-# ROC_rounded <- roc(response = features_test$hasbird, predictor = round(test_pred_glm, 1))
-# plot(ROC, print.auc = TRUE)
-# lines(ROC_rounded, col = "red", type = "b")
-# text(0.4, 0.35, labels = sprintf("AUC: %0.3f", auc(ROC_rounded)), col = "red")
 
 
 ###############

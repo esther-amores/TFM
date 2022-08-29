@@ -125,6 +125,7 @@ new_data[is.na(new_data)] <- 0
 # Predict the fitted model with the new_data dataset
 test_pred_glm <- predict(mod_glm, newdata = new_data, type = "response") 
 
+# Add the predictions and the probabilities to the final object
 final <- features_mcng %>% 
   select(sound.files, duration, selec, start, end) %>% 
   mutate(
@@ -138,8 +139,6 @@ final <- features_mcng %>%
 ## Multiclass classification
 ##
 ###############
-
-mod_svm <- mod_svm_cv$best.model
 
 # We identify the zero-variance columns' names
 which(apply(new_data, 2, var) == 0)
@@ -156,12 +155,18 @@ new_data_pca <- predict(pca, newdata = new_data) %>%
   select(1:15)
 
 # Predict the fitted model with the new_data_pca dataset
-test_pred_svm <- predict(mod_svm, newdata = new_data_pca, type = "response")
-test_pred_svm_probs <- predict(mod_svm, newdata = new_data_pca, type = "response", probability = TRUE)
+test_pred_svm <- predict(mod_svm2, newdata = new_data_pca, type = "response")
+test_pred_svm_probs <- predict(mod_svm2, newdata = new_data_pca, type = "response", probability = TRUE) %>% 
+  attr("probabilities") %>% 
+  as.data.frame() %>% 
+  round(4)
 
-final <- features_mcng %>% 
-  select(sound.files, duration, selec, start, end) %>% 
-  mutate(
-    Specie = test_pred_svm,
-    prob_hasbird = round(test_pred_svm_probs, 4)
-  ) 
+names(test_pred_svm_probs) <- paste("prob", names(test_pred_svm_probs), sep = "_")
+
+# Add the predictions and the probabilities to the final object
+final <- final %>% 
+  mutate(Specie = test_pred_svm) %>% 
+  add_column(test_pred_svm_probs)
+
+# Save final object as .csv
+write_csv2(final, file = here(tables_dir, "final.csv"))

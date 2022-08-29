@@ -164,11 +164,11 @@ time_mod_svm2 <- system.time({
                   kernel = "radial",
                   type = "C-classification",
                   cost = 1,
-                  scale = TRUE)
+                  probability = TRUE)
 })
 
 # Save the mod_svm2 object into an .RData file
-save(mod_svm2, file = here(rdata_dir, "svm_multiclass_pca_radialkernel.RData"))
+save(mod_svm2, file = here(models_dir, "svm_multiclass_pca_radialkernel.RData"))
 dim(mod_svm2)
 
 # Predict the fitted model with the features_train_pca dataset
@@ -179,12 +179,23 @@ mean(train_pred_svm2 == features_train_pca$Specie)
 
 # Predict the fitted model with the features_test_pca dataset
 test_pred_svm2 <- predict(mod_svm2, newdata = features_test_pca %>% select(-hasbird), type = "response")
+test_pred_svm2_probs <- predict(mod_svm2, newdata = newdata = features_test_pca %>% select(-hasbird), probability = TRUE) %>% 
+  attr("probabilities")
 
 # Accuracy on features_test_pca dataset
 mean(test_pred_svm2 == features_test_pca$Specie)
 
 # Compute all classification metrics on test predictions
 metrics(predicted = test_pred_svm2, actual = features_test_pca$Specie, multiclass = TRUE)
+
+# Confusion matrix
+ggsave(
+  filename = here(plots_dir, "glm_multiclass_pca.png"),
+  dpi = 1000,
+  width = 20,
+  height = 15,
+  units = "cm"
+)
 
 # AUC
 multiclass.roc(response = features_test_pca$Specie, 
